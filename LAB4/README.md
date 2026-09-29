@@ -19,7 +19,7 @@
 | Máy quét | Kali Linux (Host-Only: `192.168.56.10`) |
 | Máy đích | Metasploitable 2 (Host-Only: `192.168.56.101`) |
 | Công cụ chính | Nmap (kèm Npcap trên Windows), Zenmap (tùy chọn) |
-| Link video minh họa | *[Điền link YouTube/Drive sau khi upload]* |
+| Link video minh họa | *https://www.youtube.com/@Tr%E1%BA%A7nNguy%E1%BB%85nMinhKh%C3%B4i-22* |
 
 ---
 
