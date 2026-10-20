@@ -1,0 +1,8 @@
+﻿Order,Action,Interface,Source,Destination,Protocol/Port,Purpose
+1,Pass,LAN,LAN net,10.6.0.10,TCP/UDP 53,DNS -> DC01
+2,Pass,LAN,Client-A/Client-B,10.6.0.30,TCP 8080,Client -> WEB-PROXY
+3,Pass,LAN,LAN net,Any,"TCP 25,465,587,110,995,143,993",Mail protocols as required
+4,Block,LAN,Client-A/Client-B,Any,"TCP 80,443",Prevent direct web bypass
+5,Pass,LAN,10.6.0.30,Any,"TCP 80,443",WEB-PROXY -> web
+6,Pass,LAN,10.6.0.30,172.16.6.10,TCP 80,Proxy -> DMZ test sites
+7,Block,LAN,LAN net,Any,Any,Default explicit deny for exercise

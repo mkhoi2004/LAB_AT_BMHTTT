@@ -1,0 +1,14 @@
+﻿FQDN,Policy,Purpose
+normal.lab7.test,Allow,Website normal
+china.lab7.test,Hard block,Geo-sim China
+mideast.lab7.test,Hard block,Geo-sim Middle East
+jobs.lab7.test,Hard block,Job Search
+weapons.lab7.test,Warning/temporary bypass,Weapons
+politics.lab7.test,Warning/temporary bypass,Politics
+religion.lab7.test,Warning/temporary bypass,Religion
+education.lab7.test,Allow,Education
+entertainment.lab7.test,Scheduled,Entertainment
+games.lab7.test,Scheduled,Games
+streaming.lab7.test,Warning/temporary bypass,Streaming
+blockedgame.lab7.test,Hard block,Specific game
+download.lab7.test,Allow with AV/size controls,Download test

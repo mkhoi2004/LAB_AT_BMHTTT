@@ -1,0 +1,18 @@
+LAB7 changes for /etc/e2guardian/e2guardianf1.conf
+
+Core policy:
+reportinglevel = 3
+bypass = 300
+contentscanexceptions = off
+
+Populate the default package lists:
+- /etc/e2guardian/lists/bannedsitelist: hard_block_sites + warning_sites
+- /etc/e2guardian/lists/exceptionsitelist: allow_sites
+- non-bypass list (if enabled in your package): hard_block_sites only
+
+Expected behavior:
+- hard_block_sites: denied, no bypass when non-bypass list is active
+- warning_sites: denied page with temporary bypass/acknowledgement link
+- allow_sites: allowed
+
+For HTTPS MITM optional extension set sslmitm = on after configuring CA in e2guardian.conf.

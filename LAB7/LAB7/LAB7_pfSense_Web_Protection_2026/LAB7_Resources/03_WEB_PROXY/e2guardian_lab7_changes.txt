@@ -1,0 +1,14 @@
+LAB7 changes for /etc/e2guardian/e2guardian.conf (Ubuntu 24.04 package 5.3.5)
+
+Confirm / set:
+filterip = 10.6.0.30
+filterports = 8080
+proxyip = 127.0.0.1
+proxyport = 3128
+loglevel = 2
+
+Enable ClamAV scanner by uncommenting the packaged clamd scanner line, normally:
+contentscanner = '/etc/e2guardian/contentscanners/clamdscan.conf'
+
+For the mandatory core lab keep enablessl = off.
+For optional HTTPS inspection see 06_HTTPS_OPTIONAL.

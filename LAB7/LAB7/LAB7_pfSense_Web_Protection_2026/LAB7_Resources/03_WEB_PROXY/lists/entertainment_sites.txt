@@ -1,0 +1,2 @@
+entertainment.lab7.test
+games.lab7.test

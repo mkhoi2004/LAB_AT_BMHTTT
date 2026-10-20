@@ -1,0 +1,4 @@
+weapons.lab7.test
+politics.lab7.test
+religion.lab7.test
+streaming.lab7.test

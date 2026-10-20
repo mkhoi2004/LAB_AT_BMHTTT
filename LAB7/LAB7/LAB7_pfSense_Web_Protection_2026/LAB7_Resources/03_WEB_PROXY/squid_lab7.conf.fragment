@@ -1,0 +1,11 @@
+# LAB7 Squid fragment - Ubuntu 24.04 / Squid 6.x
+# Merge carefully after backing up /etc/squid/squid.conf.
+http_port 127.0.0.1:3128
+acl localhost src 127.0.0.1/32 ::1
+http_access allow localhost
+http_access deny all
+
+# OPTIONAL strict object size test for LAB7.
+# If supported by the installed Squid build, uncomment the following line
+# to deny responses larger than 100 MB. Validate against download.lab7.test.
+# reply_body_max_size 104857600 allow all

@@ -1,0 +1,3 @@
+normal.lab7.test
+education.lab7.test
+download.lab7.test
