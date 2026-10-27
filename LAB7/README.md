@@ -7,7 +7,7 @@
 **Học phần:** Thực hành An toàn hệ thống thông tin  
 **Năm học:** 2026–2027  
 **Youtube** https://www.youtube.com/@Tr%E1%BA%A7nNguy%E1%BB%85nMinhKh%C3%B4i-22
-**Github** https://github.com/mkhoi2004/LAB_AT_BMHTTT/tree/main/LAB7
+
 ---
 
 ## 1. Thông tin Lab
@@ -16,8 +16,8 @@
 |-----|----------|
 | Tên lab | LAB 7 – Web Protection: pfSense (firewall) + WEB-PROXY (E2Guardian → Squid → ClamAV) |
 | Nền tảng | Windows 11 (máy thật) + **VMware Workstation** |
-| Máy ảo | **pfSense-LAB6** (CE 2.7.2) · **DC01** Windows Server 2025 (AD/DNS + **IIS** + **Client**) · **WEB-PROXY** Ubuntu Server 24.04 LTS |
-| Mạng | Cả 3 VM cùng VMnet LAN `10.6.0.0/24` (pfSense `10.6.0.1`, DC01 `10.6.0.10`, WEB-PROXY `10.6.0.30`); WAN của pfSense ra Internet |
+| Máy ảo | **pfSense-LAB7** (CE 2.7.2) · **DC01** Windows Server 2025 (AD/DNS + **IIS** + **Client**) · **WEB-PROXY** Ubuntu Server 24.04 LTS |
+| Mạng | LAN Segment `LAB7-LAN` `10.6.0.0/24` (pfSense `10.6.0.1`, DC01 `10.6.0.10`, WEB-PROXY `10.6.0.30`); WAN = NAT (VMnet8); miền AD `lab7ad.test` |
 | Luồng web | DC01 (Edge/curl) → **E2Guardian `10.6.0.30:8080`** → **Squid `127.0.0.1:3128`** → site IIS `10.6.0.10` hoặc Internet qua pfSense |
 | Website mô phỏng | 13 FQDN `*.lab7.test` – IIS host header trên DC01, DNS trỏ `10.6.0.10` |
 | Bộ tài nguyên | `LAB7_Resources.zip` (list, template block, script CA HTTPS…) |
@@ -36,18 +36,25 @@
 
 ---
 
-## 2. Cách dựng môi trường
+## 2. Cách dựng môi trường (từ máy trống)
 
-1. Snapshot `LAB7_START` cho pfSense + DC01; xuất `config.xml` pfSense (mã hóa).
-2. Tạo VM **WEB-PROXY** (Ubuntu 24.04, 2 GB RAM, 2 vCPU, 20 GB, tick OpenSSH), NIC **cùng VMnet LAN** với pfSense/DC01. Giữ rule `TEMP-BUILD` đến khi xong mục 6.
-3. Nếu Captive Portal LAB 6 còn bật: thêm `10.6.0.30` vào *Allowed IP* hoặc tắt zone.
-4. WEB-PROXY: netplan `10.6.0.30/24` (GW `10.6.0.1`, DNS `10.6.0.10`, card thường là `ens33`), `timedatectl set-timezone Asia/Ho_Chi_Minh`.
-5. `sudo apt install -y squid e2guardian clamav clamav-daemon curl openssl`; `freshclam` nếu ClamAV chưa chạy.
-6. **Squid:** `http_port 127.0.0.1:3128`; thêm `acl ent_sites dstdomain entertainment.lab7.test games.lab7.test`, `acl ent_window time MTWHFAS hh:mm-hh:mm` (60 phút), `http_access deny ent_sites !ent_window` **trước** `http_access allow localhost`; `reply_body_max_size 100 MB all`; `squid -k parse`.
-7. **E2Guardian:** `filterip=10.6.0.30`, `filterports=8080`, `proxyip=127.0.0.1`, `proxyport=3128`, bật `contentscanner` clamd, `enablessl=off`; f1: `reportinglevel=3`, `bypass=300`, `contentscanexceptions=off`. Nạp list: hard block → `bannedsitelist` + non-bypass; warning → `bannedsitelist`; allow → `exceptionsitelist`. Kiểm tra không có dòng `**` bật.
-8. **DC01 (PowerShell admin):** cài IIS, tạo 13 site host header, `fsutil` tạo 10/100/110 MB, **thêm Defender exclusion** `C:\inetpub\lab7\download` rồi tạo `eicar.com.txt`; tạo zone DNS `lab7.test` (13 bản ghi A → `10.6.0.10`).
-9. **DC01 làm client:** đặt proxy `10.6.0.30:8080` (Settings hoặc registry `ProxyEnable/ProxyServer`).
-10. **pfSense:** Alias → ruleset LAN → **Reset States** → kiểm thử chống bypass.
+**Phần A – Dựng nền (mục 3–7 trong báo cáo Word)**
+
+1. Máy thật: cài VMware Workstation Pro; `ipconfig`/`route print` bảo đảm không trùng `10.6.0.0/24`. Tải ISO: pfSense CE 2.7.2 (kiểm SHA-256), Windows Server 2025 Evaluation, Ubuntu Server 24.04; giải nén `LAB7_Resources.zip`.
+2. VMware: dùng **NAT (VMnet8)** làm WAN và tạo **LAN Segment `LAB7-LAN`** làm LAN (không có card trên máy thật nên không trùng `10.6.0.1`).
+3. **pfSense-LAB7** (FreeBSD 64-bit, 2 GB, 2 vCPU, 20 GB, 2 card: NAT + `LAB7-LAN`): cài Auto (UFS) → console gán WAN `em0`, LAN `em1`, LAN `10.6.0.1/24`, **tắt DHCP**.
+4. **DC01** (Server 2025 Desktop Experience, 4 GB, 2 vCPU, 60 GB, card `LAB7-LAN`): IP `10.6.0.10/24`, GW `10.6.0.1`, đổi tên `DC01`, cài AD DS + DNS, forest `lab7ad.test`, forwarder `8.8.8.8`, cài VMware Tools.
+5. Từ Edge trên DC01 vào `https://10.6.0.1` (admin/pfsense) chạy Setup Wizard: timezone `Asia/Ho_Chi_Minh`, WAN DHCP và **bỏ chặn RFC1918/bogon**. Mặc định đã có rule *Default allow LAN to any* để các VM có Internet khi dựng.
+6. **WEB-PROXY** (Ubuntu 24.04, 2 GB, 2 vCPU, 20 GB, card `LAB7-LAN`): lúc cài đặt IP tĩnh `10.6.0.30/24`, GW `10.6.0.1`, DNS `10.6.0.10`, tick OpenSSH; đặt timezone; `apt install squid e2guardian clamav clamav-daemon curl openssl`.
+7. Snapshot `BASE_OK` (pfSense, DC01) và `PROXY_INSTALLED` (WEB-PROXY).
+
+**Phần B – Chính sách Web (mục 8–20)**
+
+8. **Squid:** `http_port 127.0.0.1:3128`; thêm `acl ent_sites dstdomain entertainment.lab7.test games.lab7.test`, `acl ent_window time MTWHFAS hh:mm-hh:mm` (60 phút), `http_access deny ent_sites !ent_window` **trước** `http_access allow localhost`; `reply_body_max_size 100 MB all`; `squid -k parse`.
+9. **E2Guardian:** `filterip=10.6.0.30`, `filterports=8080`, `proxyip=127.0.0.1`, `proxyport=3128`, bật `contentscanner` clamd, `enablessl=off`; f1: `reportinglevel=3`, `bypass=300`, `contentscanexceptions=off`. Nạp list: hard block → `bannedsitelist` + non-bypass; warning → `bannedsitelist`; allow → `exceptionsitelist`. Kiểm tra không có dòng `**` bật.
+10. **DC01 (PowerShell admin):** cài IIS, tạo 13 site host header, `fsutil` tạo 10/100/110 MB, **thêm Defender exclusion** `C:\inetpub\lab7\download` rồi tạo `eicar.com.txt`; tạo zone DNS `lab7.test` (13 bản ghi A → `10.6.0.10`).
+11. **DC01 làm client:** proxy `10.6.0.30:8080`, ngoại lệ chỉ `10.6.0.1` (WebGUI pfSense).
+12. **pfSense:** Alias → ruleset LAN (tắt *Default allow LAN to any*, giữ Anti-Lockout) → **Reset States** → kiểm thử chống bypass.
 
 ### Ruleset LAN (thứ tự từ trên xuống)
 
@@ -70,7 +77,8 @@
 
 | STT | Tình huống | Kết quả mong đợi | Trạng thái |
 |-----|------------|------------------|------------|
-| 1 | Dựng WEB-PROXY `10.6.0.30` | Ping `10.6.0.1`, `10.6.0.10` OK | ☐ |
+| 0 | Dựng pfSense-LAB7, DC01 (AD/DNS), WEB-PROXY `10.6.0.30` | Ping thông 3 máy, DC01 và WEB-PROXY ra Internet | ☐ |
+| 1 | Cài Squid/E2Guardian/ClamAV trên WEB-PROXY | 3 service chạy | ☐ |
 | 2 | Squid chỉ nghe localhost; E2Guardian `:8080` | `ss -lntp` đúng | ☐ |
 | 3 | IIS 13 site + DNS `lab7.test` + file test | `Get-Website`, `Resolve-DnsName` OK | ☐ |
 | 4 | Alias + ruleset LAN | Rule 1 trên rule 2, Reset States | ☐ |
@@ -117,8 +125,8 @@ LAB_AT_BMHTTT/
 
 | Lỗi | Nguyên nhân | Cách khắc phục |
 |-----|-------------|----------------|
-| Tắt proxy vẫn ra web | Rule Block nằm dưới `DC01_HOST → Any`; chưa Reset States | Đưa rule 1 lên trên, Apply, Reset States |
-| WEB-PROXY không ra Internet | Thiếu rule 3 / Captive Portal chặn / DNS forwarder | Kiểm tra rule, Allowed IP, `nslookup` |
+| Tắt proxy vẫn ra web | Rule Block nằm dưới `DC01_HOST → Any`; *Default allow LAN to any* còn bật; chưa Reset States | Đưa rule 1 lên trên, Apply, Reset States |
+| WEB-PROXY/DC01 không ra Internet | WAN chưa có IP; chưa bỏ chặn RFC1918 ở WAN; thiếu rule 3 | Kiểm tra Dashboard pfSense, rule, `nslookup` |
 | Proxy 502 | Squid chưa chạy, DNS, IIS site dừng, Windows Firewall DC01 | `systemctl status`, `Get-Website`, kiểm tra TCP/80 |
 | IIS 404.3 khi tải `.bin` | Thiếu MIME | `appcmd ... fileExtension='.bin'` |
 | EICAR biến mất trên DC01 | Defender xóa | Thêm exclusion thư mục `download` trước khi tạo |
