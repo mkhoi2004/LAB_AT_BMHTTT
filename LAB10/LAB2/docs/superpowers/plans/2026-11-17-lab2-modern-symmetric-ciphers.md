@@ -89,6 +89,7 @@
 
 **Files:**
 - Create: `src/main/java/week_02/FileTextIO.java`
+- Create: `src/main/java/week_02/CipherFormBase.java`
 - Create: `src/main/java/week_02/frm_Menu.java`
 - Create: `src/main/java/week_02/frm_DES.java`
 - Create: `src/main/java/week_02/frm_TripleDES.java`
@@ -102,6 +103,7 @@
 
 **Interfaces:**
 - `FileTextIO.openText(JFrame, JTextArea) -> String`, `saveText(JFrame, JTextArea, String defaultName) -> String`, `openString(JFrame) -> String`, and `saveString(JFrame, String content, String defaultName) -> String` use UTF-8 and Swing file choosers.
+- `CipherFormBase` owns shared plaintext/ciphertext/key controls, encrypt/decrypt/file actions, status reporting, and metadata-only history logging; cipher forms override algorithm operations and optional file behavior.
 - `frm_Menu` is the application entry point and opens each of the six cipher forms plus SQL connection and history forms.
 - Each non-menu form uses `DISPOSE_ON_CLOSE`; the menu alone exits the application.
 
