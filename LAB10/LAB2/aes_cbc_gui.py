@@ -1,234 +1,189 @@
-import argparse
+"""LAB 2 - Bài nâng cao 02: AES-256-CBC bằng Python (Tkinter).
+Cài thư viện (một lần): py -m pip install cryptography
+Chạy giao diện: py aes_cbc_gui.py
+Tự kiểm thử: py aes_cbc_gui.py --self-test
+"""
 import base64
-import binascii
 import secrets
-from pathlib import Path
+import sys
+import tkinter as tk
+from tkinter import filedialog, messagebox, ttk
 
-from Crypto.Cipher import AES
-from Crypto.Util.Padding import pad, unpad
-
-
-def _validate_key_iv(key: bytes, iv: bytes) -> None:
-    if not isinstance(key, bytes) or len(key) not in (16, 24, 32):
-        raise ValueError("AES key must be 16, 24, or 32 bytes.")
-    if not isinstance(iv, bytes) or len(iv) != AES.block_size:
-        raise ValueError("AES-CBC IV must be exactly 16 bytes.")
-
-
-def _decode_ciphertext(ciphertext: str) -> bytes:
-    if not isinstance(ciphertext, str) or not ciphertext:
-        raise ValueError("Ciphertext must not be empty.")
+try:
+    from cryptography.hazmat.primitives import padding
+    from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+    _USE_CRYPTOGRAPHY = True
+except ImportError:
+    _USE_CRYPTOGRAPHY = False
     try:
-        encrypted = base64.b64decode(ciphertext, validate=True)
-    except (binascii.Error, ValueError) as exc:
-        raise ValueError("Ciphertext must be valid Base64.") from exc
-    if not encrypted or len(encrypted) % AES.block_size:
-        raise ValueError("AES-CBC ciphertext must contain complete 16-byte blocks.")
-    return encrypted
+        from Crypto.Cipher import AES
+        from Crypto.Util.Padding import pad, unpad
+    except ImportError:
+        raise ImportError("Cần cài đặt thư viện cryptography (py -m pip install cryptography) hoặc pycryptodome.")
+
+# ------------------------- PHẦN XỬ LÝ (không phụ thuộc giao diện) -------------------------
+
+def new_key() -> str:
+    """Khóa AES-256 ngẫu nhiên: 32 byte, trả về Base64."""
+    return base64.b64encode(secrets.token_bytes(32)).decode("ascii")
 
 
-def encrypt_text(plaintext: str, key: bytes, iv: bytes) -> str:
-    _validate_key_iv(key, iv)
-    if not isinstance(plaintext, str):
-        raise ValueError("Plaintext must be text.")
+def new_iv() -> str:
+    """IV cho CBC: 16 byte ngẫu nhiên, trả về Base64. Mỗi lần mã hóa nên dùng IV mới."""
+    return base64.b64encode(secrets.token_bytes(16)).decode("ascii")
+
+
+def _key_iv(key_b64: str, iv_b64: str):
     try:
-        padded = pad(plaintext.encode("utf-8"), AES.block_size)
-    except UnicodeEncodeError as exc:
-        raise ValueError("Plaintext must be valid UTF-8 text.") from exc
-    encrypted = AES.new(key, AES.MODE_CBC, iv).encrypt(padded)
-    return base64.b64encode(encrypted).decode("ascii")
+        key = base64.b64decode(key_b64.strip(), validate=True)
+        iv = base64.b64decode(iv_b64.strip(), validate=True)
+    except Exception:
+        raise ValueError("Key/IV phải là chuỗi Base64 hợp lệ.")
+    if len(key) != 32 or len(iv) != 16:
+        raise ValueError("Key phải 32 byte và IV phải 16 byte. Bấm Generate Key / Generate IV.")
+    return key, iv
 
 
-def decrypt_text(ciphertext: str, key: bytes, iv: bytes) -> str:
-    _validate_key_iv(key, iv)
-    encrypted = _decode_ciphertext(ciphertext)
+def encrypt_text(plaintext: str, key_b64: str, iv_b64: str) -> str:
+    key, iv = _key_iv(key_b64, iv_b64)
+    if _USE_CRYPTOGRAPHY:
+        padder = padding.PKCS7(128).padder()  # đệm PKCS7 cho đủ bội số 16 byte
+        data = padder.update(plaintext.encode("utf-8")) + padder.finalize()
+        enc = Cipher(algorithms.AES(key), modes.CBC(iv)).encryptor()
+        return base64.b64encode(enc.update(data) + enc.finalize()).decode("ascii")
+    else:
+        padded = pad(plaintext.encode("utf-8"), 16)
+        encrypted = AES.new(key, AES.MODE_CBC, iv).encrypt(padded)
+        return base64.b64encode(encrypted).decode("ascii")
+
+
+def decrypt_text(ciphertext_b64: str, key_b64: str, iv_b64: str) -> str:
+    key, iv = _key_iv(key_b64, iv_b64)
     try:
-        plaintext = unpad(AES.new(key, AES.MODE_CBC, iv).decrypt(encrypted), AES.block_size)
-        return plaintext.decode("utf-8")
-    except (ValueError, UnicodeDecodeError) as exc:
-        raise ValueError("Ciphertext has invalid padding or is not UTF-8 for this key and IV.") from exc
+        data = base64.b64decode(ciphertext_b64.strip(), validate=True)
+    except Exception:
+        raise ValueError("Ciphertext phải là Base64.")
+    if len(data) == 0 or len(data) % 16 != 0:
+        raise ValueError("Độ dài bản mã CBC phải là bội số của 16 byte.")
+    
+    if _USE_CRYPTOGRAPHY:
+        dec = Cipher(algorithms.AES(key), modes.CBC(iv)).decryptor()
+        padded = dec.update(data) + dec.finalize()
+        try:
+            unpadder = padding.PKCS7(128).unpadder()
+            plain = unpadder.update(padded) + unpadder.finalize()
+            return plain.decode("utf-8")
+        except Exception:
+            raise ValueError("Giải mã thất bại: sai Key/IV hoặc bản mã bị sửa.")
+    else:
+        try:
+            plain = unpad(AES.new(key, AES.MODE_CBC, iv).decrypt(data), 16)
+            return plain.decode("utf-8")
+        except Exception:
+            raise ValueError("Giải mã thất bại: sai Key/IV hoặc bản mã bị sửa.")
 
 
-def format_ciphertext_file(iv: bytes, ciphertext: str) -> str:
-    _validate_key_iv(bytes(32), iv)
-    _decode_ciphertext(ciphertext)
-    return f"IV={iv.hex().upper()}\n{ciphertext}\n"
+# ------------------------------------- GIAO DIỆN -------------------------------------
 
-
-def parse_ciphertext_file(content: str) -> tuple[bytes, str]:
-    if not isinstance(content, str):
-        raise ValueError("Ciphertext file must be text.")
-    lines = content.splitlines()
-    if len(lines) != 2 or not lines[0].startswith("IV="):
-        raise ValueError("File must contain exactly an IV=HEX line and a Base64 ciphertext line.")
-    iv_hex = lines[0][3:].strip()
-    if len(iv_hex) != AES.block_size * 2:
-        raise ValueError("AES-CBC IV must contain exactly 32 HEX characters.")
-    try:
-        iv = bytes.fromhex(iv_hex)
-    except ValueError as exc:
-        raise ValueError("AES-CBC IV must contain valid HEX.") from exc
-    _validate_key_iv(bytes(32), iv)
-    ciphertext = lines[1].strip()
-    _decode_ciphertext(ciphertext)
-    return iv, ciphertext
-
-
-class App:
-    def __init__(self, root=None):
-        import tkinter as tk
-        from tkinter import filedialog, messagebox, ttk
-
-        self._tk = tk
-        self._filedialog = filedialog
-        self._messagebox = messagebox
-        self._ttk = ttk
-        self.root = root if root is not None else tk.Tk()
-        self.root.title("LAB 2 - AES-CBC")
-        self.root.minsize(760, 560)
-
-        self.key_var = tk.StringVar(value="")
-        self.iv_var = tk.StringVar(value="")
-        self.status_var = tk.StringVar(value="Generate or enter an AES key and IV.")
-
-        self._build_ui()
-
-    def _build_ui(self) -> None:
-        tk = self._tk
-        ttk = self._ttk
-        root = self.root
-        root.columnconfigure(0, weight=1)
-        root.rowconfigure(2, weight=1)
-        root.rowconfigure(4, weight=1)
-
-        key_frame = ttk.Frame(root, padding=10)
-        key_frame.grid(row=0, column=0, sticky="ew")
-        key_frame.columnconfigure(1, weight=1)
-        ttk.Label(key_frame, text="Key (HEX):").grid(row=0, column=0, sticky="w", padx=4, pady=4)
-        ttk.Entry(key_frame, textvariable=self.key_var).grid(row=0, column=1, sticky="ew", padx=4, pady=4)
-        ttk.Label(key_frame, text="IV (32 HEX chars):").grid(row=1, column=0, sticky="w", padx=4, pady=4)
-        ttk.Entry(key_frame, textvariable=self.iv_var).grid(row=1, column=1, sticky="ew", padx=4, pady=4)
-        ttk.Button(key_frame, text="Generate Key + IV", command=self.generate_key_iv).grid(
-            row=0, column=2, rowspan=2, padx=8
+class App(tk.Tk):
+    def __init__(self):
+        super().__init__()
+        self.title("AES-CBC Python - LAB 2")
+        self.resizable(False, False)
+        f = ttk.Frame(self, padding=14)
+        f.grid()
+        ttk.Label(f, text="BÀI NÂNG CAO 02 - AES-256-CBC (PYTHON)", font=("Segoe UI", 14, "bold")).grid(
+            row=0, column=0, columnspan=3, sticky="w", pady=(0, 8)
         )
-
-        ttk.Label(root, text="Plaintext").grid(row=1, column=0, sticky="w", padx=14)
-        self.plaintext_text = tk.Text(root, height=8, wrap="word")
-        self.plaintext_text.grid(row=2, column=0, sticky="nsew", padx=12, pady=(2, 8))
-
-        ttk.Label(root, text="Ciphertext (Base64)").grid(row=3, column=0, sticky="w", padx=14)
-        self.ciphertext_text = tk.Text(root, height=8, wrap="word")
-        self.ciphertext_text.grid(row=4, column=0, sticky="nsew", padx=12, pady=(2, 8))
-
-        buttons = ttk.Frame(root, padding=(10, 4))
-        buttons.grid(row=5, column=0, sticky="ew")
-        ttk.Button(buttons, text="Encrypt", command=self.encrypt).pack(side="left", padx=4)
-        ttk.Button(buttons, text="Decrypt", command=self.decrypt).pack(side="left", padx=4)
-        ttk.Button(buttons, text="Open File", command=self.open_file).pack(side="left", padx=4)
-        ttk.Button(buttons, text="Save Ciphertext", command=self.save_file).pack(side="left", padx=4)
-
-        ttk.Label(root, textvariable=self.status_var, padding=10).grid(row=6, column=0, sticky="ew")
-
-    def generate_key_iv(self) -> None:
-        self.key_var.set(secrets.token_bytes(32).hex().upper())
-        self.iv_var.set(secrets.token_bytes(AES.block_size).hex().upper())
-        self.status_var.set("Generated a 256-bit AES key and a fresh IV.")
-
-    def encrypt(self) -> None:
-        try:
-            ciphertext = encrypt_text(
-                self.plaintext_text.get("1.0", "end-1c"),
-                bytes.fromhex(self.key_var.get().strip()),
-                bytes.fromhex(self.iv_var.get().strip()),
-            )
-        except (ValueError, binascii.Error) as exc:
-            self.status_var.set(str(exc))
-            return
-        self.ciphertext_text.delete("1.0", "end")
-        self.ciphertext_text.insert("1.0", ciphertext)
-        self.status_var.set("Encryption complete.")
-
-    def decrypt(self) -> None:
-        try:
-            plaintext = decrypt_text(
-                self.ciphertext_text.get("1.0", "end-1c").strip(),
-                bytes.fromhex(self.key_var.get().strip()),
-                bytes.fromhex(self.iv_var.get().strip()),
-            )
-        except (ValueError, binascii.Error) as exc:
-            self.status_var.set(str(exc))
-            return
-        self.plaintext_text.delete("1.0", "end")
-        self.plaintext_text.insert("1.0", plaintext)
-        self.status_var.set("Decryption complete.")
-
-    def open_file(self) -> None:
-        filename = self._filedialog.askopenfilename(
-            title="Open AES-CBC ciphertext",
-            filetypes=(("Text files", "*.txt"), ("All files", "*.*")),
+        ttk.Label(f, text="Plaintext:").grid(row=1, column=0, sticky="nw")
+        self.txt_plain = tk.Text(f, width=64, height=5, wrap="word")
+        self.txt_plain.grid(row=1, column=1, columnspan=2, pady=3)
+        ttk.Label(f, text="Key (Base64):").grid(row=2, column=0, sticky="w")
+        self.key = tk.StringVar()
+        ttk.Entry(f, textvariable=self.key, width=60).grid(row=2, column=1, sticky="w", pady=3)
+        ttk.Button(f, text="Generate Key", command=lambda: self.key.set(new_key())).grid(
+            row=2, column=2, sticky="ew"
         )
-        if not filename:
-            return
-        try:
-            content = Path(filename).read_text(encoding="utf-8")
-            iv, ciphertext = parse_ciphertext_file(content)
-        except (OSError, UnicodeError, ValueError, binascii.Error) as exc:
-            self.status_var.set(f"Could not open ciphertext file: {exc}")
-            return
-        self.iv_var.set(iv.hex().upper())
-        self.ciphertext_text.delete("1.0", "end")
-        self.ciphertext_text.insert("1.0", ciphertext)
-        self.status_var.set("Ciphertext and IV loaded. Enter the matching key to decrypt.")
-
-    def save_file(self) -> None:
-        ciphertext = self.ciphertext_text.get("1.0", "end-1c").strip()
-        try:
-            iv = bytes.fromhex(self.iv_var.get().strip())
-            content = format_ciphertext_file(iv, ciphertext)
-        except (ValueError, binascii.Error) as exc:
-            self.status_var.set(str(exc))
-            return
-        filename = self._filedialog.asksaveasfilename(
-            title="Save AES-CBC ciphertext",
-            defaultextension=".txt",
-            initialfile="aes-cbc-ciphertext.txt",
-            filetypes=(("Text files", "*.txt"), ("All files", "*.*")),
+        ttk.Label(f, text="IV (Base64):").grid(row=3, column=0, sticky="w")
+        self.iv = tk.StringVar()
+        ttk.Entry(f, textvariable=self.iv, width=60).grid(row=3, column=1, sticky="w", pady=3)
+        ttk.Button(f, text="Generate IV", command=lambda: self.iv.set(new_iv())).grid(
+            row=3, column=2, sticky="ew"
         )
-        if not filename:
-            return
+        ttk.Label(f, text="Ciphertext:").grid(row=4, column=0, sticky="nw")
+        self.txt_cipher = tk.Text(f, width=64, height=5, wrap="char")
+        self.txt_cipher.grid(row=4, column=1, columnspan=2, pady=3)
+        b = ttk.Frame(f)
+        b.grid(row=5, column=1, columnspan=2, sticky="w", pady=6)
+        for text, cmd in [
+            ("Encrypt", self.encrypt),
+            ("Decrypt", self.decrypt),
+            ("Save File", self.save),
+            ("Open File", self.open),
+        ]:
+            ttk.Button(b, text=text, command=cmd).pack(side="left", padx=(0, 8))
+        self.status = tk.StringVar(value="Bấm Generate Key và Generate IV trước.")
+        ttk.Label(f, textvariable=self.status).grid(row=6, column=1, columnspan=2, sticky="w")
+
+    def _get(self, widget):
+        return widget.get("1.0", "end-1c")
+
+    def _set(self, widget, value):
+        widget.delete("1.0", "end")
+        widget.insert("1.0", value)
+
+    def encrypt(self):
         try:
-            Path(filename).write_text(content, encoding="utf-8")
-        except OSError as exc:
-            self.status_var.set(f"Could not save ciphertext file: {exc}")
-            return
-        self.status_var.set("Saved IV and ciphertext. The key is not stored in the file.")
+            self._set(self.txt_cipher, encrypt_text(self._get(self.txt_plain), self.key.get(), self.iv.get()))
+            self.status.set("Đã mã hóa AES-CBC.")
+        except ValueError as ex:
+            messagebox.showerror("Lỗi", str(ex))
+
+    def decrypt(self):
+        try:
+            self._set(self.txt_plain, decrypt_text(self._get(self.txt_cipher), self.key.get(), self.iv.get()))
+            self.status.set("Đã giải mã AES-CBC.")
+        except ValueError as ex:
+            messagebox.showerror("Lỗi", str(ex))
+
+    def save(self):
+        """Lưu IV + bản mã (KHÔNG lưu Key)."""
+        path = filedialog.asksaveasfilename(defaultextension=".txt", initialfile="aes_cbc_ciphertext.txt")
+        if path:
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write("IV=" + self.iv.get().strip() + "\n" + self._get(self.txt_cipher).strip() + "\n")
+            self.status.set("Đã lưu: " + path)
+
+    def open(self):
+        path = filedialog.askopenfilename(filetypes=[("Text file", "*.txt")])
+        if path:
+            with open(path, encoding="utf-8") as fh:
+                lines = fh.read().strip().split("\n", 1)
+            if len(lines) < 2 or not lines[0].startswith("IV="):
+                messagebox.showerror("Lỗi", "Tệp không đúng định dạng (dòng 1: IV=..., dòng 2: bản mã).")
+                return
+            self.iv.set(lines[0][3:].strip())
+            self._set(self.txt_cipher, lines[1].strip())
+            self.status.set("Đã mở tệp. Nhập đúng Key rồi bấm Decrypt.")
 
 
-def _run_self_test() -> None:
-    key = secrets.token_bytes(32)
-    iv = secrets.token_bytes(AES.block_size)
-    plaintext = "LAB 2 AES-CBC self-test — " * 2048
-    ciphertext = encrypt_text(plaintext, key, iv)
-    if decrypt_text(ciphertext, key, iv) != plaintext:
-        raise RuntimeError("AES-CBC self-test round trip failed.")
-
-
-def main(argv=None) -> int:
-    parser = argparse.ArgumentParser(description="LAB 2 AES-CBC encryption application.")
-    parser.add_argument("--self-test", action="store_true", help="run a crypto round-trip without opening Tkinter")
-    args = parser.parse_args(argv)
-    if args.self_test:
-        _run_self_test()
-        print("SELF-TEST OK")
-        return 0
-
-    import tkinter as tk
-
-    root = tk.Tk()
-    App(root)
-    root.mainloop()
-    return 0
+def self_test():
+    key, iv = new_key(), new_iv()
+    long_text = "Văn bản dài tiếng Việt có dấu. " * 200
+    for text in ["Xin chào AES-CBC", "", "1234567890123456", long_text]:
+        assert decrypt_text(encrypt_text(text, key, iv), key, iv) == text
+    c = encrypt_text("abc", key, iv)
+    assert len(base64.b64decode(c)) == 16  # 3 byte + đệm = 16 byte
+    try:
+        decrypt_text(c, new_key(), iv)
+        raise AssertionError("sai khóa phải lỗi")
+    except ValueError:
+        pass
+    print("SELF-TEST OK: 4 thông điệp mã hóa/giải mã đúng, sai khóa bị phát hiện.")
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    if "--self-test" in sys.argv:
+        self_test()
+    else:
+        App().mainloop()

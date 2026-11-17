@@ -1,8 +1,8 @@
 $ErrorActionPreference = 'Stop'
 
-$server = Read-Host 'SQL Server [127.0.0.1,14333]'
+$server = Read-Host 'SQL Server [127.0.0.1,1433]'
 if ([string]::IsNullOrWhiteSpace($server)) {
-    $server = '127.0.0.1,14333'
+    $server = '127.0.0.1,1433'
 }
 if ($server.Contains(';')) {
     throw 'Server name must not contain a semicolon.'

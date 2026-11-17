@@ -7,11 +7,11 @@ import javax.swing.JTextField;
 public class frm_Twofish extends CipherFormBase {
 
     private final JTextField txt_iv = new JTextField(TwofishCipher.newIv(), 34);
-    private final JButton btn_new_iv = new JButton("New IV");
+    private final JButton btn_new_iv = new JButton("Generate IV");
 
     public frm_Twofish() {
-        super("Twofish Cipher", "Key", "lab2-twofish-key");
-        optionsPanel.add(new JLabel("IV (32 HEX chars):"));
+        super("Twofish Cipher", "Key", "Twofish@Lab2");
+        optionsPanel.add(new JLabel("IV (HEX):"));
         optionsPanel.add(txt_iv);
         optionsPanel.add(btn_new_iv);
         btn_new_iv.addActionListener(event -> txt_iv.setText(TwofishCipher.newIv()));

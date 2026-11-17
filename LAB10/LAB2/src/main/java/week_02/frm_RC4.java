@@ -3,7 +3,7 @@ package week_02;
 public class frm_RC4 extends CipherFormBase {
 
     public frm_RC4() {
-        super("RC4 Cipher", "Key", "lab2-key");
+        super("RC4 Cipher", "Key", "Key");
     }
 
     @Override

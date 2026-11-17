@@ -33,10 +33,12 @@ class UserDaoTest {
     @EnabledIfEnvironmentVariable(named = "LAB2_SQL_PASSWORD", matches = ".+")
     void sqlRegistrationLoginAndHistoryStoreMetadataOnly() throws SQLException {
         String server = envOrDefault("LAB2_SQL_SERVER", "127.0.0.1");
-        int port = Integer.parseInt(envOrDefault("LAB2_SQL_PORT", "14333"));
+        int port = Integer.parseInt(envOrDefault("LAB2_SQL_PORT", "1433"));
         String database = envOrDefault("LAB2_SQL_DATABASE", "LAB2_MaHoaHienDai");
         String user = envOrDefault("LAB2_SQL_USER", "lab2_user");
-        DbConfig.set(server, port, database, user, System.getenv("LAB2_SQL_PASSWORD").toCharArray());
+        String rawPassword = System.getenv("LAB2_SQL_PASSWORD");
+        char[] sqlPassword = rawPassword != null ? rawPassword.trim().toCharArray() : "LabUser@2026".toCharArray();
+        DbConfig.set(server, port, database, user, sqlPassword);
 
         String username = "test_" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
         char[] password = "IntegrationPass@2026".toCharArray();

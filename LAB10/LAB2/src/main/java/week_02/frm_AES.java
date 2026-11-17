@@ -14,11 +14,11 @@ public class frm_AES extends CipherFormBase {
     private final JTextField txt_ticket = new JTextField(14);
     private final JButton btn_register = new JButton("Register");
     private final JButton btn_login = new JButton("Login");
-    private final JButton btn_sql = new JButton("SQL Connection");
+    private final JButton btn_sql = new JButton("Kết nối SQL Server");
     private String currentUser;
 
     public frm_AES() {
-        super("AES-GCM Cipher", "AES encryption password", "");
+        super("AES Cipher - Register / Login", "Key AES:", "MatKhauAES@2026");
         txt_ticket.setEditable(false);
         optionsPanel.add(new JLabel("Username:"));
         optionsPanel.add(txt_username);
@@ -48,7 +48,7 @@ public class frm_AES extends CipherFormBase {
 
     @Override
     protected String algorithmName() {
-        return "AES-GCM";
+        return "AES";
     }
 
     @Override
@@ -79,7 +79,7 @@ public class frm_AES extends CipherFormBase {
         try {
             String username = txt_username.getText().trim();
             UserDao.register(username, password);
-            String history = HistoryDao.tryInsert("AES-GCM", "REGISTER", username, 0, 0);
+            String history = HistoryDao.tryInsert("AES", "REGISTER", username, 0, 0);
             setStatus("Đăng ký thành công. " + history, true);
         } catch (IllegalArgumentException | IllegalStateException | SQLException ex) {
             setStatus(ex.getMessage(), false);
@@ -100,7 +100,7 @@ public class frm_AES extends CipherFormBase {
             }
             currentUser = username;
             txt_ticket.setText(UserDao.newTicket());
-            String history = HistoryDao.tryInsert("AES-GCM", "LOGIN", currentUser, 0, 0);
+            String history = HistoryDao.tryInsert("AES", "LOGIN", currentUser, 0, 0);
             setStatus("Login thành công. " + history, true);
         } catch (IllegalArgumentException | IllegalStateException | SQLException ex) {
             clearLogin();

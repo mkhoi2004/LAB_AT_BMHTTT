@@ -17,16 +17,16 @@ import javax.swing.JTextField;
 public class frm_KetNoiSQL extends JFrame {
 
     private final JTextField txt_server = new JTextField("127.0.0.1", 22);
-    private final JTextField txt_port = new JTextField("14333", 22);
+    private final JTextField txt_port = new JTextField("1433", 22);
     private final JTextField txt_database = new JTextField("LAB2_MaHoaHienDai", 22);
     private final JTextField txt_username = new JTextField("lab2_user", 22);
-    private final JPasswordField txt_password = new JPasswordField(22);
+    private final JPasswordField txt_password = new JPasswordField("LabUser@2026", 22);
     private final JButton btn_test = new JButton("Test Connection");
-    private final JButton btn_history = new JButton("Open History");
+    private final JButton btn_history = new JButton("Xem lịch sử");
     private final JLabel lbl_status = new JLabel("Nhập thông tin SQL Server để kiểm tra kết nối.");
 
     public frm_KetNoiSQL() {
-        super("SQL Server Connection");
+        super("Kết nối Microsoft SQL Server");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
         JPanel fields = new JPanel(new GridBagLayout());

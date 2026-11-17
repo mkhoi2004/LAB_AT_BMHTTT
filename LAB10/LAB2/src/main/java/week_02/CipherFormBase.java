@@ -137,12 +137,19 @@ abstract class CipherFormBase extends JFrame {
         }
     }
 
+    protected String defaultFileName() {
+        return algorithmName().toLowerCase().replace("-", "_") + "_ciphertext.txt";
+    }
+
     protected void openFileAction() {
-        FileTextIO.openText(this, txt_plaintext);
+        String path = FileTextIO.openText(this, txt_ciphertext);
+        if (path != null) {
+            setStatus("Đã mở tệp: " + path, true);
+        }
     }
 
     protected void saveFileAction() {
-        String path = FileTextIO.saveText(this, txt_ciphertext, "ciphertext.txt");
+        String path = FileTextIO.saveText(this, txt_ciphertext, defaultFileName());
         if (path != null) {
             setStatus("Đã lưu tệp: " + path, true);
         }

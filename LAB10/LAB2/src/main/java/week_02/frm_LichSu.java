@@ -14,11 +14,11 @@ import javax.swing.table.DefaultTableModel;
 public class frm_LichSu extends JFrame {
 
     private final JTable tbl_history = new JTable(HistoryDao.emptyModel());
-    private final JLabel lbl_status = new JLabel(" ", SwingConstants.LEFT);
-    private final JButton btn_refresh = new JButton("Refresh");
+    private final JLabel lbl_status = new JLabel("Đang tải...", SwingConstants.LEFT);
+    private final JButton btn_refresh = new JButton("Tải lại");
 
     public frm_LichSu() {
-        super("Operation History");
+        super("Lịch sử thao tác (SQL Server)");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         tbl_history.setAutoCreateRowSorter(true);
         add(new JScrollPane(tbl_history), BorderLayout.CENTER);
