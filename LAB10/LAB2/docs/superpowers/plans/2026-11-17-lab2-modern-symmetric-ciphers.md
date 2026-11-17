@@ -6,7 +6,7 @@
 
 **Architecture:** Create a standalone Maven project in this folder with crypto, database, and Swing form classes under `week_02`. Keep the Python AES-CBC GUI in a separate script with testable crypto functions. Build the report from an untouched copy of the supplied guide, inserting screenshots only after the corresponding behavior is verified.
 
-**Tech Stack:** Java 17, Maven, Swing, JUnit 5, Microsoft SQL Server JDBC, BouncyCastle Twofish, Python 3.10+, Tkinter, `cryptography`, and DOCX/XML tooling.
+**Tech Stack:** Java 17, Maven, Swing, JUnit 5, Microsoft SQL Server JDBC, BouncyCastle Twofish, Python 3.9+, Tkinter, PyCryptodome, and DOCX/XML tooling.
 
 **Spec:** Design content supplied and read in the task context; the expected file `docs/superpowers/specs/2026-11-17-lab2-modern-symmetric-ciphers-design.md` was not present when implementation began.
 
@@ -14,7 +14,7 @@
 
 - Java 17, Maven, Swing, UTF-8, SQL Server JDBC, package `week_02`; follow the Vietnamese naming and presentation style in LAB1.
 - Keep LAB2 as a standalone `LAB2_MaHoaHienDai` project; do not modify LAB1 or `LAB2_HuongDan.docx`.
-- Use BouncyCastle for Twofish and Python's `cryptography` package for AES-CBC.
+- Use BouncyCastle for Twofish and Python's PyCryptodome package for AES-CBC.
 - DES and TripleDES use CBC with random 8-byte IVs prefixed to Base64 ciphertext; RC4 displays HEX. These are educational demonstrations only.
 - AES uses AES-256-GCM, PBKDF2-HMAC-SHA256, 120,000 iterations, 16-byte salt, 12-byte nonce, and an authentication tag; require a successful login before AES operations.
 - Twofish uses CBC, a 16-byte IV, and a 256-bit SHA-256-derived key. AES-CTR uses a 32-byte key, 12-byte nonce, and no padding.
@@ -56,11 +56,11 @@
 - `AESCTRCipher.newKey()`, `newNonce()`, `encrypt(String plaintext, String keyBase64, String nonceBase64)`, `decrypt(String ciphertextBase64, String keyBase64, String nonceBase64)`, `toFile(String nonceBase64, String ciphertextBase64)`, `fromFile(String content)`.
 - All cipher APIs throw `IllegalArgumentException` for invalid user input and surface cryptographic failures as explicit errors; no silent or success-shaped fallback.
 
-- [ ] **Step 1: Write focused failing JUnit tests** for DES and TripleDES round trips/key lengths; the required RC4 vector `Plaintext`/`Key` → `BBF316E8D940AF0AD3`; AES-GCM round trip and tamper rejection; Twofish IV/file round trip; and AES-CTR ordinary and >1,000-character round trips with decoded ciphertext byte length equal to UTF-8 plaintext byte length.
-- [ ] **Step 2: Run `mvn test`** and confirm the tests fail because the project/classes are not implemented.
-- [ ] **Step 3: Implement the Maven project and cipher APIs** with group `vn.edu.lab`, artifact `LAB2_MaHoaHienDai`, version `1.0-SNAPSHOT`, Java release 17, JUnit 5, Microsoft SQL Server JDBC, and `bcprov-jdk18on`; configure `week_02.frm_Menu` as the exec main class. Use exact IV, key, salt, nonce, tag, padding, and iteration values from Global Constraints. Encode AES-CTR key and nonce as Base64 as in the guide; serialize Twofish files as `IV=<HEX>` followed by Base64 ciphertext, and CTR files as `NONCE=<Base64>` followed by Base64 ciphertext.
-- [ ] **Step 4: Run `mvn test`** and confirm all cipher tests pass, including malformed Base64/HEX and invalid key-size cases.
-- [ ] **Step 5: Commit** the project and cipher-core files with message `feat: add lab2 cipher core`.
+- [x] **Step 1: Write focused failing JUnit tests** for DES and TripleDES round trips/key lengths; the required RC4 vector `Plaintext`/`Key` → `BBF316E8D940AF0AD3`; AES-GCM round trip and tamper rejection; Twofish IV/file round trip; and AES-CTR ordinary and >1,000-character round trips with decoded ciphertext byte length equal to UTF-8 plaintext byte length.
+- [x] **Step 2: Run `mvn test`** and confirm the tests fail because the project/classes are not implemented.
+- [x] **Step 3: Implement the Maven project and cipher APIs** with group `vn.edu.lab`, artifact `LAB2_MaHoaHienDai`, version `1.0-SNAPSHOT`, Java release 17, JUnit 5, Microsoft SQL Server JDBC, and `bcprov-jdk18on`; configure `week_02.frm_Menu` as the exec main class. Use exact IV, key, salt, nonce, tag, padding, and iteration values from Global Constraints. Encode AES-CTR key and nonce as Base64 as in the guide; serialize Twofish files as `IV=<HEX>` followed by Base64 ciphertext, and CTR files as `NONCE=<Base64>` followed by Base64 ciphertext.
+- [x] **Step 4: Run `mvn test`** and confirm all cipher tests pass, including malformed Base64/HEX and invalid key-size cases.
+- [x] **Step 5: Commit** the project and cipher-core files with message `feat: add lab2 cipher core`.
 
 ### Task 2: Adding SQL configuration, history, and user authentication
 
@@ -79,11 +79,11 @@
 - `HistoryDao.insert(String algorithm, String operation, String username, int inputLength, int outputLength)`, `tryInsert(String algorithm, String operation, String username, int inputLength, int outputLength) -> String`, `emptyModel() -> DefaultTableModel`, and `loadLatest(int top) -> DefaultTableModel`. Lengths are UTF-8 byte counts.
 - `UserDao.register(String username, char[] password)`, `login(String username, char[] password)`, and `newTicket()`. Registration requires an 8-character minimum, stores a random 16-byte salt and 32-byte PBKDF2-HMAC-SHA256 hash at 120,000 iterations, and login compares hashes in constant time. A successful login ticket is 16 random bytes represented as 32 uppercase HEX characters.
 
-- [ ] **Step 1: Write tests** for username/password validation, ticket shape, failed-login behavior, and duplicate-user handling using a narrow persistence seam or a configured SQL integration test; assert history interfaces accept metadata only.
-- [ ] **Step 2: Run the focused tests** and verify they fail before implementation.
-- [ ] **Step 3: Implement JDBC access and local setup scripts.** Match the guide's `dbo.app_users` (`user_id`, unique `username`, 16-byte `salt`, 32-byte `password_hash`, UTC `created_at`) and `dbo.crypto_history` (`history_id`, `algorithm`, `operation`, nullable `app_username`, input/output lengths, UTC `created_at`). Use prepared statements. The PowerShell login setup prompts for a hidden password at runtime and never writes it to a file; include no example/default secret.
-- [ ] **Step 4: Run the focused tests and build.** If SQL Server is configured, run the integration test against `127.0.0.1:14333`, register/login, record all four AES actions, and verify table rows and absence of content/key columns. Otherwise, record SQL integration as an unmet environment prerequisite, not a pass.
-- [ ] **Step 5: Commit** SQL and authentication files with message `feat: add lab2 sql auth and history`.
+- [x] **Step 1: Write tests** for username/password validation, ticket shape, failed-login behavior, and duplicate-user handling using a narrow persistence seam or a configured SQL integration test; assert history interfaces accept metadata only.
+- [x] **Step 2: Run the focused tests** and verify they fail before implementation.
+- [x] **Step 3: Implement JDBC access and local setup scripts.** Match the guide's `dbo.app_users` (`user_id`, unique `username`, 16-byte `salt`, 32-byte `password_hash`, UTC `created_at`) and `dbo.crypto_history` (`history_id`, `algorithm`, `operation`, nullable `app_username`, input/output lengths, UTC `created_at`). Use prepared statements. The PowerShell login setup prompts for a hidden password at runtime and never writes it to a file; include no example/default secret.
+- [x] **Step 4: Run the focused tests and build.** If SQL Server is configured, run the integration test against `127.0.0.1:14333`, register/login, record all four AES actions, and verify table rows and absence of content/key columns. Otherwise, record SQL integration as an unmet environment prerequisite, not a pass.
+- [x] **Step 5: Commit** SQL and authentication files with message `feat: add lab2 sql auth and history`.
 
 ### Task 3: Building the Java Swing forms
 
@@ -107,11 +107,11 @@
 - `frm_Menu` is the application entry point and opens each of the six cipher forms plus SQL connection and history forms.
 - Each non-menu form uses `DISPOSE_ON_CLOSE`; the menu alone exits the application.
 
-- [ ] **Step 1: Write form behavior tests** for menu navigation targets/default close behavior and AES encryption/decryption being unavailable before login; test model and save-format helpers without showing dialogs.
-- [ ] **Step 2: Run `mvn test`** and confirm the new form tests fail before implementation.
-- [ ] **Step 3: Implement the nine Vietnamese Swing forms** with the guide's labels and workflows. Hook each cipher form to its cipher API; provide open/save for text-based forms, save/open of IV or nonce plus ciphertext for Twofish/CTR, registration/login/ticket gating for AES, runtime SQL credential entry, and history refresh. Show actionable errors for invalid input and unavailable SQL; do not store passwords in files or history.
-- [ ] **Step 4: Run `mvn test` and `mvn compile exec:java`.** Verify each form opens/closes correctly and each file workflow restores the required metadata and ciphertext. Confirm the application starts without an available database and reports its connection state explicitly.
-- [ ] **Step 5: Commit** Java forms and file I/O with message `feat: add lab2 swing interface`.
+- [x] **Step 1: Write form behavior tests** for menu navigation targets/default close behavior and AES encryption/decryption being unavailable before login; test model and save-format helpers without showing dialogs.
+- [x] **Step 2: Run `mvn test`** and confirm the new form tests fail before implementation.
+- [x] **Step 3: Implement the nine Vietnamese Swing forms** with the guide's labels and workflows. Hook each cipher form to its cipher API; provide open/save for text-based forms, save/open of IV or nonce plus ciphertext for Twofish/CTR, registration/login/ticket gating for AES, runtime SQL credential entry, and history refresh. Show actionable errors for invalid input and unavailable SQL; do not store passwords in files or history.
+- [x] **Step 4: Run `mvn test` and `mvn compile exec:java`.** Verify each form opens/closes correctly and each file workflow restores the required metadata and ciphertext. Confirm the application starts without an available database and reports its connection state explicitly.
+- [x] **Step 5: Commit** Java forms and file I/O with message `feat: add lab2 swing interface`.
 
 ### Task 4: Creating the Python AES-CBC application
 
@@ -125,19 +125,19 @@
 - `decrypt_text(ciphertext: str, key: bytes, iv: bytes) -> str` validates and decrypts that representation, raising `ValueError` for malformed or unauthentic data.
 - The `App` Tkinter class provides generated key/IV, encrypt/decrypt, and file open/save; saved files contain `IV=<HEX>` and ciphertext only.
 
-- [ ] **Step 1: Write failing Python tests** for a UTF-8 long-text round trip, invalid key/IV/ciphertext, and the CLI self-test success output.
-- [ ] **Step 2: Run `python -m unittest discover -s tests -v`** and confirm the expected failures.
-- [ ] **Step 3: Implement the independent crypto functions and Tkinter interface.** Generate a 32-byte key and fresh 16-byte IV with `secrets`; keep the `--self-test` path independent of Tkinter window creation and print exactly `SELF-TEST OK` on success.
-- [ ] **Step 4: Run `python -m unittest discover -s tests -v` and `python aes_cbc_gui.py --self-test`**; verify long text round-trips and the command prints `SELF-TEST OK`.
-- [ ] **Step 5: Commit** Python source, dependency manifest, and tests with message `feat: add python aes cbc lab`.
+- [x] **Step 1: Write failing Python tests** for a UTF-8 long-text round trip, invalid key/IV/ciphertext, and the CLI self-test success output.
+- [x] **Step 2: Run `python -m unittest discover -s tests -v`** and confirm the expected failures.
+- [x] **Step 3: Implement the independent crypto functions and Tkinter interface.** Generate a 32-byte key and fresh 16-byte IV with `secrets`; keep the `--self-test` path independent of Tkinter window creation and print exactly `SELF-TEST OK` on success.
+- [x] **Step 4: Run `python -m unittest discover -s tests -v` and `python aes_cbc_gui.py --self-test`**; verify long text round-trips and the command prints `SELF-TEST OK`.
+- [x] **Step 5: Commit** Python source, dependency manifest, and tests with message `feat: add python aes cbc lab`.
 
 ### Task 5: Documenting setup and run instructions
 
 **Files:**
 - Create: `README.md`
 
-- [ ] **Step 1: Write the README** with Java and Python run/test commands, SQL Server Express prerequisites and setup order, operator-provided SQL credentials, and the educational-only warning for DES, TripleDES, RC4, and unauthenticated CTR.
-- [ ] **Step 2: Check every command** against the Maven/Python files and SQL scripts created in Tasks 1–4; remove any command that cannot be run as written.
+- [x] **Step 1: Write the README** with Java and Python run/test commands, SQL Server Express prerequisites and setup order, operator-provided SQL credentials, and the educational-only warning for DES, TripleDES, RC4, and unauthenticated CTR.
+- [x] **Step 2: Check every command** against the Maven/Python files and SQL scripts created in Tasks 1–4; remove any command that cannot be run as written.
 - [ ] **Step 3: Commit** the README with message `docs: add lab2 setup instructions`.
 
 ### Task 6: Producing the verified results report
